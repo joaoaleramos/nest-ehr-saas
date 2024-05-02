@@ -1,0 +1,236 @@
+// schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Define the Patient entity
+model Patient {
+  patientId               String                   @id @unique @default(uuid()) @map("patient_id")
+  name                    String
+  dateOfBirth             DateTime
+  gender                  String
+  address                 String?
+  phoneNumber             String?
+  email                   String?
+  allergies               String?
+  pastIllnesses           String?
+  surgeries               String?
+  policyNumber            String?
+  insuranceProvider       String?
+  user                    User                     @relation(fields: [userId], references: [userId])
+  userId                  String
+  appointments            Appointment[]
+  billingRecords          BillingRecord[]
+  prescriptions           Prescription[]
+  labTests                LabTest[]
+  imagingStudies          ImagingStudy[]
+  payments                Payment[]
+  insurances              Insurance[]
+  claims                  Claim[]
+  healthcareProfessionals HealthcareProfessional[] @relation("AssignedHealthcareProfessionals")
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+
+  @@map("patients")
+}
+
+model HealthcareProfessional {
+  profId           String         @id @unique @default(uuid()) @map("prof_id")
+  name             String
+  contactDetails   String?
+  licenseNumber    String
+  specialty        String
+  user             User           @relation(fields: [userId], references: [userId])
+  userId           String
+  appointments     Appointment[]
+  clinicalNotes    ClinicalNote[]
+  labTests         LabTest[]
+  imagingStudies   ImagingStudy[]
+  prescriptions    Prescription[]
+  assignedPatients Patient[]      @relation("AssignedHealthcareProfessionals")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@map("healthcareProfissionals")
+}
+
+// Define the Appointment entity
+model Appointment {
+  appointmentId   String                 @id @unique @default(uuid()) @map("appointment_id")
+  dateTime        DateTime
+  patient         Patient                @relation(fields: [patientId], references: [patientId])
+  patientId       String
+  healthcareProf  HealthcareProfessional @relation(fields: [profId], references: [profId])
+  profId          String
+  appointmentType String
+  status          String
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+
+  @@map("appointments")
+}
+
+// Define the Clinical Note entity
+model ClinicalNote {
+  clinicalNoteId String                 @id @unique @default(uuid()) @map("clinical_note_id")
+  dateTime       DateTime
+  author         HealthcareProfessional @relation(fields: [profId], references: [profId])
+  profId         String
+  noteType       String
+  content        String
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@map("clinicalNotes")
+}
+
+// Define the Billing Record entity
+model BillingRecord {
+  billingRecordId  String   @id @unique @default(uuid()) @map("billing_record_id")
+  encounterDate    DateTime
+  patient          Patient  @relation(fields: [patientId], references: [patientId])
+  patientId        String
+  servicesProvided String
+  insuranceInfo    String?
+  billingStatus    String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("billingRecords")
+}
+
+// Define the Prescription entity
+model Prescription {
+  prescriptionId     String                 @id @unique @default(uuid()) @map("prescription_id")
+  patient            Patient                @relation(fields: [patientId], references: [patientId])
+  patientId          String
+  medicationName     String
+  dosage             String
+  frequency          String
+  route              String
+  prescriber         HealthcareProfessional @relation(fields: [profId], references: [profId])
+  profId             String
+  prescriptionStatus String
+
+  @@map("prescriptions")
+}
+
+// Define the Lab Test entity
+model LabTest {
+  labTestId        String                 @id @unique @default(uuid()) @map("lab_test_id")
+  patient          Patient                @relation(fields: [patientId], references: [patientId])
+  patientId        String
+  testType         String
+  dateTime         DateTime
+  results          String
+  orderingProvider HealthcareProfessional @relation(fields: [profId], references: [profId])
+  profId           String
+
+  @@map("labTests")
+}
+
+// Define the Imaging Study entity
+model ImagingStudy {
+  imagingStudyId   String                 @id @unique @default(uuid())
+  patient          Patient                @relation(fields: [patientId], references: [patientId])
+  patientId        String
+  studyType        String
+  dateTime         DateTime
+  results          String
+  orderingProvider HealthcareProfessional @relation(fields: [profId], references: [profId])
+  profId           String
+
+  @@map("imagingstudies")
+}
+
+model User {
+  userId                 String                   @id @unique @default(uuid())
+  username               String                   @unique
+  password               String
+  role                   Role
+  Patient                Patient[]
+  HealthcareProfessional HealthcareProfessional[]
+  Notification           Notification[]
+  Receptionist           Receptionist[]
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+
+  @@map("users")
+}
+
+// Define the Role enum type
+enum Role {
+  ADMIN
+  HEALTHCARE_PROFESSIONAL
+  PATIENT
+  RECEPTIONIST
+  STAFF
+}
+
+// Define the Notification entity
+model Notification {
+  notificationId String   @id @unique @default(uuid())
+  content        String
+  dateTime       DateTime
+  userId         String
+  user           User     @relation(fields: [userId], references: [userId])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("notifications")
+}
+
+// Define the Payment entity
+model Payment {
+  paymentId String   @id @unique @default(uuid())
+  patient   Patient  @relation(fields: [patientId], references: [patientId])
+  patientId String
+  amount    Float
+  date      DateTime
+  method    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payments")
+}
+
+// Define the Receptionist entity
+model Receptionist {
+  receptionistId String  @id @unique @default(uuid())
+  name           String
+  contactDetails String?
+  user           User    @relation(fields: [userId], references: [userId])
+  userId         String
+
+  @@map("receptionists")
+}
+
+// Define the Insurance entity
+model Insurance {
+  insuranceId  String  @id @unique @default(uuid())
+  patient      Patient @relation(fields: [patientId], references: [patientId])
+  patientId    String
+  policyNumber String
+  provider     String
+
+  @@map("insurances")
+}
+
+// Define the Claim entity
+model Claim {
+  claimId     String   @id @unique @default(uuid())
+  patient     Patient  @relation(fields: [patientId], references: [patientId])
+  patientId   String
+  claimStatus String
+  amount      Float
+  date        DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("claims")
+}
